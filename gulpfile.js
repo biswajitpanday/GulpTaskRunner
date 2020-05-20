@@ -1,83 +1,80 @@
-var gulp		= require("gulp"),
-	del 		= require("del"),
-	uglify 		= require("gulp-uglify"),
-	concat 		= require("gulp-concat"),
-	rename 		= require("gulp-rename"),
-	imagemin 	= require("gulp-imagemin"),
-	minifycss	= require("gulp-minify-css");
-
+var gulp      = require("gulp"),
+    del       = require("del"),
+    uglify    = require("gulp-uglify"),
+    concat    = require("gulp-concat"),
+    rename    = require("gulp-rename"),
+    imagemin  = require("gulp-imagemin"),
+    cleanCSS = require("gulp-clean-css")
+    
 var paths = {
-	css: {
-		site: [
-			"css/vendor/bootstrap.css",
-			"css/style.css",
-			"css/site.css"
-		]
-	},
-
-	scripts: {
-		vendors: [
-			"js/vendor/jquery.js",
-			"js/vendor/angular.js",
-			"js/vendor/underscore.js"
-		],
-		app: [
-			"js/loginModule.js",
-			"js/trafficModule.js",
-			"js/mapModule.js"
-		]
-	},
-
-	images: "img/**/*"
+    css: {
+        site: [
+            "css/vendor/bootstrap.css",
+            "css/style.css"
+        ]
+    },
+    scripts: {
+        vendors: [
+            "js/vendor/jquery.js",
+            "js/vendor/require.js",
+            "js/scripts.js"
+        ],
+        app: [
+            "js/scripts.js",
+            "js/vendor/jquery.js"
+        ]
+    },
+    images: "img/**/*"
 };
-
+ 
 var css = function(path, outputFileName, destination) {
-	destination = destination || "build/css";
-
-	return gulp.src(path)
-		.pipe(concat(outputFileName))
-		.pipe(gulp.dest(destination))
-		.pipe(rename({suffix: ".min"}))
-		.pipe(minifycss())
-		.pipe(gulp.dest(destination));
+    destination = destination || "build/css";
+ 
+    return gulp.src(path)
+        .pipe(concat(outputFileName))
+        .pipe(gulp.dest(destination))
+        .pipe(rename({ suffix: ".min" }))
+        .pipe(cleanCSS({compatibility: 'ie8'}))
+        .pipe(gulp.dest(destination));
 };
-
+ 
 var scripts = function(path, outputFileName, destination) {
-	destination = destination || "build/js";
-	return gulp.src(path)
-		.pipe(concat(outputFileName))
-		.pipe(gulp.dest(destination))
-		.pipe(rename({suffix: ".min"}))
-		.pipe(uglify())
-		.pipe(gulp.dest(destination));	
+    destination = destination || "build/js";
+ 
+    return gulp.src(path)
+        .pipe(concat(outputFileName))
+        .pipe(gulp.dest(destination))
+        .pipe(rename({ suffix: ".min" }))
+        .pipe(uglify())
+        .pipe(gulp.dest(destination));
 };
-
+ 
 gulp.task("Clean", function(cb) {
-	del(["build"], cb);
+    del(["build"], cb);
 });
-
-gulp.task("Images", ["Clean"], function() {
-	return gulp.src(paths.images)
-		.pipe(imagemin({optimizationLevel: 5}))
-		.pipe(gulp.dest("build/img"));
-});
-
-gulp.task("VendorScripts", ["Clean"], function() {
-	return scripts(paths.scripts.vendors, "vendor.js");
-});
-
-gulp.task("AppScripts", ["Clean"], function() {
-	return scripts(paths.scripts.app, "app.js");
-});
-
-gulp.task("SiteCSS", ["Clean"], function() {
-	return css(paths.css.site, "site.css");
-});
-
+ 
+gulp.task("Images", gulp.series("Clean", function() {
+    return gulp.src(paths.images)
+        .pipe(imagemin({optimizationLevel: 5}))
+        .pipe(gulp.dest("build/img"));
+}));
+ 
+gulp.task("VendorScripts", gulp.series("Clean", function() {
+    return scripts(paths.scripts.vendors, "vendor.js");
+}));
+ 
+gulp.task("AppScripts", gulp.series("Clean", function() {
+    return scripts(paths.scripts.app, "app.js");
+}));
+ 
+gulp.task("SiteCSS", gulp.series("Clean", function() {
+    return css(paths.css.site, "site.css");
+}));
+ 
 gulp.task("Watch", function() {
-	gulp.watch(paths.scripts.app, ["AppScripts"]);
-	gulp.watch(paths.css.site, ["Site.CSS"]);
-	gulp.watch(paths.images, ["Images"]);
+    gulp.watch(paths.scripts.app, gulp.series("AppScripts"));
+    gulp.watch(paths.css.site, gulp.series("SiteCSS"));
+    gulp.watch(paths.images, gulp.series("Images"));
 });
-
-gulp.task("default", ["Watch", "SiteCSS", "Images", "VendorScripts", "AppScripts"]);
+ 
+gulp.task("default", gulp.series("Watch", "SiteCSS", "Images", "VendorScripts", "AppScripts"));
